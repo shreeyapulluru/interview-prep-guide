@@ -522,23 +522,41 @@ app.post("/api/data", (req, res) => {
   console.log("  - skills:", skills);
   console.log("  - weeks:", weeks);
 
-  const requiredSkills = companyRequirements[companyType] || [];
-  const studentSkills = skills ? skills.map((s) => s.toLowerCase()) : [];
+  // Use selected skills to improve - if no skills selected, use company type requirements
+  const skillsToImprove = (skills && skills.length > 0) 
+    ? skills.map((s) => s.toLowerCase()) 
+    : (companyRequirements[companyType] || []);
 
-  const missingSkills = requiredSkills.filter(
-    (skill) => !studentSkills.includes(skill)
-  );
+  console.log("✅ Skills to improve on:", skillsToImprove);
 
   let suggestedQuestions = [];
 
-  missingSkills.forEach((skill) => {
+  skillsToImprove.forEach((skill) => {
     if (data.questions[skill]) {
       suggestedQuestions = suggestedQuestions.concat(data.questions[skill]);
     }
   });
 
-  // Generate week-by-week roadmap
-  const weeklyRoadmap = generateWeeklyRoadmap(companyType, weeks);
+  // Generate week-by-week roadmap for selected skills
+  let weeklyRoadmap;
+  weeklyRoadmap = skillsToImprove
+    .map(skill => {
+      const skillName = skill.toLowerCase();
+      if (skillName === "dsa") return { title: "Data Structures & Algorithms", points: ["Arrays, Linked Lists, Stacks, Queues", "Binary Trees and Graphs", "Dynamic Programming", "Practice problems on LeetCode"] };
+      if (skillName === "system design") return { title: "System Design", points: ["Scalability basics", "Design patterns", "Microservices vs Monolith", "Practice system design questions"] };
+      if (skillName === "dbms") return { title: "DBMS", points: ["Database concepts", "Normalization", "Transactions and ACID", "Query optimization"] };
+      if (skillName === "oop") return { title: "OOP Principles", points: ["Classes and Objects", "Inheritance and Polymorphism", "Encapsulation", "Design Patterns"] };
+      if (skillName === "aptitude") return { title: "Aptitude", points: ["Quantitative Problem Solving", "Logical Reasoning", "Verbal Ability", "Mock Tests"] };
+      if (skillName === "java") return { title: "Java", points: ["OOP Concepts", "Collections Framework", "Exception Handling", "Multithreading"] };
+      if (skillName === "sql") return { title: "SQL & Database", points: ["Queries and JOINs", "Normalization", "Transactions", "Query Optimization"] };
+      if (skillName === "communication") return { title: "Communication", points: ["Self Introduction", "Technical Explanation", "Group Discussion", "HR Interview"] };
+      if (skillName === "javascript") return { title: "JavaScript", points: ["ES6+ Syntax", "DOM Manipulation", "Promises & Async/Await", "Event Handling"] };
+      if (skillName === "react") return { title: "React", points: ["Components & JSX", "Hooks", "State Management", "Performance Optimization"] };
+      if (skillName === "node") return { title: "Node.js", points: ["Event-Driven Architecture", "Express.js", "Streams", "Middleware"] };
+      if (skillName === "api") return { title: "API Design", points: ["REST Principles", "HTTP Methods", "Authentication", "Error Handling"] };
+      return null;
+    })
+    .filter(item => item !== null);
   
   console.log("🔧 Generated weekly roadmap for", weeks, "weeks");
   console.log("✅ Weekly roadmap:", JSON.stringify(weeklyRoadmap, null, 2));
@@ -550,19 +568,23 @@ app.post("/api/data", (req, res) => {
     startup: ["javascript", "react", "node", "api", "javascript", "react", "node", "api"]
   };
 
-  const weeklyFocusSkills = weeklyFocusSkillMap[companyType] || [];
+  // Generate weekly focus skills - cycle through selected skills
+  let weeklyFocusSkills = [];
+  for (let w = 0; w < weeks; w++) {
+    weeklyFocusSkills[w] = skillsToImprove[w % skillsToImprove.length];
+  }
 
-  // Generate skill-specific weekly content
+  // Generate skill-specific weekly content for selected skills
   const skillWeeklyRoadmap = {};
-  requiredSkills.forEach((skill) => {
+  skillsToImprove.forEach((skill) => {
     const skillName = skill.toLowerCase();
     skillWeeklyRoadmap[skillName] = generateSkillWeeklyContent(skillName, weeks);
   });
 
   console.log("📚 Generated skill-specific weekly content for:", Object.keys(skillWeeklyRoadmap));
 
-  // Generate week-specific questions with weekly focus
-  const weeklyQuestions = generateWeeklyQuestions(requiredSkills, weeks, weeklyFocusSkills);
+  // Generate week-specific questions for selected skills
+  const weeklyQuestions = generateWeeklyQuestions(skillsToImprove, weeks, weeklyFocusSkills);
   console.log("📋 Generated weekly questions for", weeks, "weeks");
 
   // Generate week-specific checklist
@@ -587,7 +609,8 @@ app.post("/api/data", (req, res) => {
       technical: technicalQuestions,
       hr: hrQuestions
     },
-    resources: data.resources
+    resources: data.resources,
+    skillsToImprove: skillsToImprove
   });
 });
 

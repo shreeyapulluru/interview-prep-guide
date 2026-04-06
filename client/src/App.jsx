@@ -12,17 +12,11 @@ function App() {
   const [questions, setQuestions] = useState({ technical: [], hr: [] });
   const [resources, setResources] = useState([]);
   const [roadmap, setRoadmap] = useState([]);
+  const [skillRoadmap, setSkillRoadmap] = useState({});
   const [weeklyQuestions, setWeeklyQuestions] = useState({});
   const [weeklyChecklist, setWeeklyChecklist] = useState({});
   const [currentWeek, setCurrentWeek] = useState(1);
-  const [checklist, setChecklist] = useState([
-    { text: "Prepare self introduction", done: true },
-    { text: "Revise DBMS, OS, CN, OOP", done: false },
-    { text: "Practice 2 coding problems daily", done: false },
-    { text: "Complete one aptitude mock test", done: true },
-    { text: "Update resume and projects", done: false },
-    { text: "Practice HR interview answers", done: false },
-  ]);
+  const [skillsToImprove, setSkillsToImprove] = useState([]);
 
 useEffect(() => {
   if (currentPage !== "home") {
@@ -39,7 +33,11 @@ useEffect(() => {
     })
       .then((res) => res.json())
       .then((data) => {
-        setRoadmap(data.roadmap);
+        setSkillsToImprove(data.skillsToImprove || []);
+        
+        // Display roadmap for selected skills to improve
+        setRoadmap(data.roadmap || []);
+        setSkillRoadmap(data.skillRoadmap || {});
         setQuestions(data.questions);
         setResources(data.resources);
         setWeeklyQuestions(data.weeklyQuestions || {});
@@ -55,19 +53,32 @@ useEffect(() => {
   const currentWeekQuestions = weeklyQuestions[currentWeekKey] || { technical: [], hr: [] };
   const currentWeekChecklistItems = weeklyChecklist[currentWeekKey] || [];
 
+  // Calculate progress from all weeks' checklist items
   const progress = useMemo(() => {
-    const doneCount = checklist.filter((item) => item.done).length;
-    return Math.round((doneCount / checklist.length) * 100);
-  }, [checklist]);
+    let totalItems = 0;
+    let doneItems = 0;
+    
+    for (let week = 1; week <= preparationTime; week++) {
+      const weekKey = `week${week}`;
+      const weekItems = weeklyChecklist[weekKey] || [];
+      totalItems += weekItems.length;
+      doneItems += weekItems.filter(item => item.done).length;
+    }
+    
+    return totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
+  }, [weeklyChecklist, preparationTime]);
 
   const filteredQuestions = (currentWeekQuestions[tab] || []).filter((q) =>
     q.toLowerCase().includes(search.toLowerCase())
   );
 
-  const toggleChecklist = (index) => {
-    const updated = [...checklist];
+  const toggleWeeklyChecklist = (index) => {
+    const updated = [...currentWeekChecklistItems];
     updated[index].done = !updated[index].done;
-    setChecklist(updated);
+    setWeeklyChecklist({
+      ...weeklyChecklist,
+      [currentWeekKey]: updated
+    });
   };
 
   if (currentPage === "home") {
@@ -92,7 +103,7 @@ useEffect(() => {
             questions, HR guidance, daily checklists, and useful resources.
           </p>
           <div className="hero-buttons">
-            <button onClick={() => setCurrentPage("home")}>Start Preparation</button>
+            <button onClick={() => setCurrentPage("home")}>Home</button>
           </div>
         </div>
 
@@ -191,14 +202,7 @@ useEffect(() => {
                 <input
                   type="checkbox"
                   checked={item.done}
-                  onChange={() => {
-                    const updated = [...currentWeekChecklistItems];
-                    updated[index].done = !updated[index].done;
-                    setWeeklyChecklist({
-                      ...weeklyChecklist,
-                      [currentWeekKey]: updated
-                    });
-                  }}
+                  onChange={() => toggleWeeklyChecklist(index)}
                 />
                 {item.text}
               </label>
