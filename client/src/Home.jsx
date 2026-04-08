@@ -7,14 +7,19 @@ function Home({ setCurrentPage, setCompanyType: setAppCompanyType, setSkills, se
   const [preparationTime, setPreparationTime] = useState(4);
 
   const handleGeneratePlan = () => {
-    if (!companyType || !skillset) {
-      alert("Please select a company type and enter your skillset");
+    if (!companyType && !skillset) {
+      alert("Please select a company type or enter your skillset");
       return;
     }
 
+    // If custom skillset provided, use it; otherwise use company type
+    const skillsToUse = skillset 
+      ? skillset.split(",").map((s) => s.trim())
+      : [];
+
     // send values to App.jsx
     setAppCompanyType(companyType);
-    setSkills(skillset.split(",").map((s) => s.trim().toLowerCase()));
+    setSkills(skillsToUse);
     setAppPreparationTime(preparationTime);
 
     setCurrentPage("dashboard");
@@ -62,13 +67,14 @@ function Home({ setCurrentPage, setCompanyType: setAppCompanyType, setSkills, se
                   <p>Focus on Aptitude, Basics, Communication</p>
                 </button>
               </div>
+              
             </div>
 
             <div className="form-section">
-              <h3 className="form-title">💻 Current Skillset</h3>
+              <h3 className="form-title">💻 Target Skills (Optional)</h3>
               <textarea
                 className="skillset-input"
-                placeholder="e.g. Java (Intermediate), SQL (Basic), No System Design knowledge..."
+                placeholder="e.g. Java, Python, Machine Learning... (leave empty to use company type defaults)"
                 value={skillset}
                 onChange={(e) => setSkillset(e.target.value)}
               />
